@@ -1,0 +1,28 @@
+*&---------------------------------------------------------------------*
+*& Report ZABAPTEST
+*&---------------------------------------------------------------------*
+*& Exercise 3: create a report that allows us to create a dynamic query
+*&             with dynamic join and where
+*&---------------------------------------------------------------------*
+REPORT zabaptest.
+
+INCLUDE zabaptest_scr.
+INCLUDE zabaptest_cla.
+
+START-OF-SELECTION.
+
+  TRY .
+      "We pass the selection screen parameters in a structure to the constructor
+      DATA(lo_program) = NEW lcl_program( VALUE #( name = p_name
+                                                   lname = p_lname
+                                                   dept = p_dept
+                                                   floor = p_floor
+                                                   area = p_area
+                                                   ofname = p_ofname
+                                                   empid_rg = s_empid[] ) ).
+      "Execute the program's logic
+      lo_program->run( ).
+    CATCH zcx_abaptest INTO DATA(lcx_abaptest).
+      "We use an exception class created for this program
+      MESSAGE lcx_abaptest->get_text( ) TYPE lcl_program=>mc_s_message-success DISPLAY LIKE lcl_program=>mc_s_message-error.
+  ENDTRY.
