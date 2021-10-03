@@ -1,0 +1,34 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZABAPTEST_DGD_SCR
+*&---------------------------------------------------------------------*
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-b01.
+
+DATA: gs_employee TYPE /basf/employee,
+      gs_departments TYPE /basf/departments,
+      gs_locations TYPE /basf/locations.
+"Employee table
+SELECT-OPTIONS s_empid FOR gs_employee-id NO INTERVALS.
+SELECT-OPTIONS s_name FOR gs_employee-name NO INTERVALS.
+SELECT-OPTIONS s_lname FOR gs_employee-lastname NO INTERVALS.
+SELECT-OPTIONS s_deptid FOR gs_employee-departmentid.
+"Departments table
+SELECT-OPTIONS s_dept FOR gs_departments-department NO INTERVALS.
+SELECT-OPTIONS s_locid FOR gs_departments-locationid NO INTERVALS.
+"Locations table
+SELECT-OPTIONS s_floor FOR gs_locations-floor.
+SELECT-OPTIONS s_area FOR gs_locations-area NO INTERVALS.
+SELECT-OPTIONS s_offid FOR gs_locations-officeid.
+SELECT-OPTIONS s_offnam FOR gs_locations-officename NO INTERVALS.
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-b02.
+
+PARAMETERS p_name AS CHECKBOX. "Name
+PARAMETERS p_lname AS CHECKBOX. "Lastname
+PARAMETERS p_dept AS CHECKBOX.  "Department
+PARAMETERS p_floor AS CHECKBOX.  "Office Floor
+PARAMETERS p_area AS CHECKBOX.  "Office Area
+PARAMETERS p_ofname AS CHECKBOX.  "Office Name
+
+SELECTION-SCREEN END OF BLOCK b2.
