@@ -1,0 +1,394 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZABAPTEST_DGD_CLA
+*&---------------------------------------------------------------------*
+CLASS gcl_program DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    "Attributes
+    CONSTANTS: BEGIN OF mc_s_message,
+                 error   TYPE syst-msgty VALUE 'E', "Error essage type
+                 success TYPE syst-msgty VALUE 'S', "Success message type
+                 msgid   TYPE syst-msgid VALUE 'ZABAPTEST_DGD', "Our message class
+               END OF mc_s_message,
+               BEGIN OF mc_s_table_name, "Constant structure with the table names
+                 employee    TYPE tabname30 VALUE '/BASF/EMPLOYEE',
+                 departments TYPE tabname30 VALUE '/BASF/DEPARTMENTS',
+                 locations   TYPE tabname30 VALUE '/BASF/LOCATIONS',
+               END OF mc_s_table_name,
+               BEGIN OF mc_s_colname, "Column names. Used in the ALV settings
+                 name       TYPE lvc_fname VALUE 'NAME',
+                 lastname   TYPE lvc_fname VALUE 'LASTNAME',
+                 department TYPE lvc_fname VALUE 'DEPARTMENT',
+                 floor      TYPE lvc_fname VALUE 'FLOOR',
+                 area       TYPE lvc_fname VALUE 'AREA',
+                 officename TYPE lvc_fname VALUE 'OFFICENAME',
+               END OF mc_s_colname,
+               BEGIN OF mc_s_alv_settings,
+                 pfstatus TYPE sypfkey VALUE 'STANDARD_FULLSCREEN',
+                 report   TYPE syrepid VALUE 'SAPLSETB',
+               END OF mc_s_alv_settings.
+
+    "Types
+    TYPES: BEGIN OF mty_s_selection_screen,
+             name      TYPE abap_bool,
+             lname     TYPE abap_bool,
+             dept      TYPE abap_bool,
+             floor     TYPE abap_bool,
+             area      TYPE abap_bool,
+             ofname    TYPE abap_bool,
+             empid_rg  TYPE RANGE OF /basf/employee-id,
+             name_rg   TYPE RANGE OF /basf/employee-name,
+             lname_rg  TYPE RANGE OF /basf/employee-lastname,
+             deptid_rg TYPE RANGE OF /basf/employee-departmentid,
+             dept_rg   TYPE RANGE OF /basf/departments-department,
+             locid_rg  TYPE RANGE OF /basf/departments-locationid,
+             floor_rg  TYPE RANGE OF /basf/locations-floor,
+             area_rg   TYPE RANGE OF /basf/locations-area,
+             offid_rg  TYPE RANGE OF /basf/locations-officeid,
+             offnam_rg TYPE RANGE OF /basf/locations-officename,
+           END OF mty_s_selection_screen.
+
+    "Methods
+    METHODS constructor IMPORTING is_selection_screen TYPE mty_s_selection_screen.
+    METHODS run RAISING zcx_abaptest_dgd cx_salv_msg cx_salv_not_found.
+
+  PRIVATE SECTION.
+
+    "Types
+    TYPES: BEGIN OF mty_s_data,
+             name       TYPE /basf/employee-name,
+             lastname   TYPE /basf/employee-lastname,
+             department TYPE /basf/departments-department,
+             floor      TYPE /basf/locations-floor,
+             area       TYPE /basf/locations-area,
+             officename TYPE /basf/locations-officename,
+           END OF mty_s_data,
+           mty_t_data TYPE STANDARD TABLE OF mty_s_data WITH DEFAULT KEY.
+    "Attributes
+    DATA: ms_selection_screen TYPE mty_s_selection_screen.
+    "Methods
+    METHODS get_sel_fields RETURNING VALUE(rv_sel_fields) TYPE string RAISING zcx_abaptest_dgd.
+    METHODS get_dtab_syntax RETURNING VALUE(rv_dtab_syntax) TYPE string RAISING zcx_abaptest_dgd.
+    METHODS get_condition RETURNING VALUE(rv_condition) TYPE string RAISING zcx_abaptest_dgd.
+    METHODS get_data IMPORTING iv_sel_fields  TYPE string
+                               iv_dtab_syntax TYPE string
+                               iv_condition   TYPE string
+                     RETURNING VALUE(rt_data) TYPE mty_t_data
+                     RAISING   zcx_abaptest_dgd.
+    METHODS show_alv IMPORTING it_data TYPE mty_t_data RAISING zcx_abaptest_dgd cx_salv_msg cx_salv_not_found.
+    METHODS set_pf_status CHANGING co_alv TYPE REF TO cl_salv_table RAISING zcx_abaptest_dgd.
+    METHODS set_display_settings CHANGING co_alv TYPE REF TO cl_salv_table RAISING zcx_abaptest_dgd cx_salv_not_found.
+    METHODS hide_columns CHANGING co_alv TYPE REF TO cl_salv_table RAISING zcx_abaptest_dgd cx_salv_not_found.
+
+ENDCLASS.
+
+CLASS gcl_program IMPLEMENTATION.
+  METHOD constructor.
+
+    "Save the selection screen parameters for later use
+    ms_selection_screen = is_selection_screen.
+
+  ENDMETHOD.
+
+  METHOD run.
+
+    "Get selection fields depending on the selection screen parameters
+    DATA(lv_sel_fields) = get_sel_fields( ).
+
+    "Get JOIN clause depending on the selection screen parameters
+    DATA(lv_dtab_syntax) = get_dtab_syntax( ).
+
+    "Get the condition for the WHERE dynamically, depending on the selection screen parameters
+    DATA(lv_condition) = get_condition( ).
+
+    "Select the data
+    DATA(lt_data) = get_data( iv_sel_fields = lv_sel_fields
+                              iv_dtab_syntax = lv_dtab_syntax
+                              iv_condition = lv_condition ).
+
+    "Display the data in an ALV
+    show_alv( lt_data ).
+
+  ENDMETHOD.
+
+  METHOD get_dtab_syntax.
+
+    DATA(lv_employee_syntax) = |{ mc_s_table_name-employee }|.
+    DATA(lv_departments_syntax) = |{ lv_employee_syntax } JOIN { mc_s_table_name-departments } ON { mc_s_table_name-employee }~DEPARTMENTID EQ { mc_s_table_name-departments }~ID|.
+    DATA(lv_locations_syntax) = |{ lv_departments_syntax } JOIN { mc_s_table_name-locations } ON { mc_s_table_name-departments }~LOCATIONID EQ { mc_s_table_name-locations }~LOCATIONID|.
+
+    CASE abap_true.
+      WHEN ms_selection_screen-name OR ms_selection_screen-lname.
+        DATA(lv_employee) = abap_true.
+    ENDCASE.
+    CASE abap_true.
+      WHEN ms_selection_screen-dept.
+        DATA(lv_departments) = abap_true.
+    ENDCASE.
+    CASE abap_true.
+      WHEN ms_selection_screen-floor OR ms_selection_screen-area OR ms_selection_screen-ofname.
+        DATA(lv_locations) = abap_true.
+    ENDCASE.
+
+    IF lv_locations EQ abap_true.
+      rv_dtab_syntax = lv_locations_syntax.
+    ELSEIF lv_departments EQ abap_true.
+      rv_dtab_syntax = lv_departments_syntax.
+    ELSEIF lv_employee EQ abap_true.
+      rv_dtab_syntax = lv_employee_syntax.
+    ENDIF.
+
+    IF rv_dtab_syntax IS INITIAL.
+      "Message: Error building the database syntax
+      RAISE EXCEPTION TYPE zcx_abaptest_dgd
+        EXPORTING
+          textid = VALUE #( msgid = mc_s_message-msgid
+                            msgno = 001 ).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD get_condition.
+
+    IF ms_selection_screen-empid_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-employee }~ID IN @MS_SELECTION_SCREEN-EMPID_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-employee }~ID IN @MS_SELECTION_SCREEN-EMPID_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-name_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-employee }~NAME IN @MS_SELECTION_SCREEN-NAME_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-employee }~NAME IN @MS_SELECTION_SCREEN-NAME_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-lname_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-employee }~LASTNAME IN @MS_SELECTION_SCREEN-LNAME_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-employee }~LASTNAME IN @MS_SELECTION_SCREEN-LNAME_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-deptid_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-employee }~DEPARTMENTID IN @MS_SELECTION_SCREEN-DEPTID_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-employee }~DEPARTMENTID IN @MS_SELECTION_SCREEN-DEPTID_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-dept_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-departments }~DEPARTMENT IN @MS_SELECTION_SCREEN-DEPT_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-departments }~DEPARTMENT IN @MS_SELECTION_SCREEN-DEPT_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-locid_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-departments }~LOCATIONID IN @MS_SELECTION_SCREEN-LOCID_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-departments }~LOCATIONID IN @MS_SELECTION_SCREEN-LOCID_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-floor_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-locations }~FLOOR IN @MS_SELECTION_SCREEN-FLOOR_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-locations }~FLOOR IN @MS_SELECTION_SCREEN-FLOOR_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-area_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-locations }~AREA IN @MS_SELECTION_SCREEN-AREA_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-locations }~AREA IN @MS_SELECTION_SCREEN-AREA_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-offid_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-locations }~OFFICEID IN @MS_SELECTION_SCREEN-OFFID_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-locations }~OFFICEID IN @MS_SELECTION_SCREEN-OFFID_RG|.
+      ENDIF.
+    ENDIF.
+
+    IF ms_selection_screen-offnam_rg IS NOT INITIAL.
+      IF rv_condition IS INITIAL.
+        rv_condition = |{ mc_s_table_name-locations }~OFFICENAME IN @MS_SELECTION_SCREEN-OFFNAM_RG|.
+      ELSE.
+        rv_condition = |{ rv_condition } AND { mc_s_table_name-locations }~OFFICENAME IN @MS_SELECTION_SCREEN-OFFNAM_RG|.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD get_sel_fields.
+
+    IF ms_selection_screen-name EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-employee }~NAME,|.
+    ENDIF.
+
+    IF ms_selection_screen-lname EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-employee }~LASTNAME,|.
+    ENDIF.
+
+    IF ms_selection_screen-dept EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-departments }~DEPARTMENT,|.
+    ENDIF.
+
+    IF ms_selection_screen-floor EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-locations }~FLOOR,|.
+    ENDIF.
+
+    IF ms_selection_screen-area EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-locations }~AREA,|.
+    ENDIF.
+
+    IF ms_selection_screen-ofname EQ abap_true.
+      rv_sel_fields = |{ rv_sel_fields } { mc_s_table_name-locations }~OFFICENAME,|.
+    ENDIF.
+
+    IF rv_sel_fields IS INITIAL.
+      "Message: Please choose at least one field
+      RAISE EXCEPTION TYPE zcx_abaptest_dgd
+        EXPORTING
+          textid = VALUE #( msgid = mc_s_message-msgid
+                            msgno = 000 ).
+    ELSE.
+      "Delete last comma
+      DATA(lv_length_minus_one) = strlen( rv_sel_fields ) - 1.
+      rv_sel_fields = rv_sel_fields(lv_length_minus_one).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD get_data.
+
+    IF iv_sel_fields IS INITIAL OR
+       iv_dtab_syntax IS INITIAL.
+      "Message: Insufficient or incorrect import parameters
+      RAISE EXCEPTION TYPE zcx_abaptest_dgd
+        EXPORTING
+          textid = VALUE #( msgid = mc_s_message-msgid
+                            msgno = 002
+                            ).
+    ENDIF.
+    IF iv_condition IS INITIAL.
+      SELECT (iv_sel_fields)
+      FROM (iv_dtab_syntax)
+      INTO CORRESPONDING FIELDS OF TABLE @rt_data.
+    ELSE.
+      SELECT (iv_sel_fields)
+        FROM (iv_dtab_syntax)
+        INTO CORRESPONDING FIELDS OF TABLE @rt_data
+        WHERE (iv_condition).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD show_alv.
+
+    "References
+    DATA lo_alv  TYPE REF TO cl_salv_table.
+
+    "Get a reference to the ALV
+    DATA(lt_data) = it_data.
+    cl_salv_table=>factory(
+      IMPORTING
+        r_salv_table = lo_alv
+      CHANGING
+        t_table      = lt_data ).
+
+    "Set the PF status. In this example, we take the same PF status as in transaction SE11. Activate all the functions
+    set_pf_status( CHANGING co_alv = lo_alv ).
+
+    "Optimize the column width and set a stripped pattern.
+    "In addition, we hide the columns that weren't selected
+    set_display_settings( CHANGING co_alv = lo_alv ).
+
+    lo_alv->display( ).
+
+  ENDMETHOD.
+
+  METHOD set_pf_status.
+
+    co_alv->set_screen_status(
+      pfstatus      =  mc_s_alv_settings-pfstatus
+      report        =  mc_s_alv_settings-report
+      set_functions = co_alv->c_functions_all ).
+
+  ENDMETHOD.
+
+  METHOD set_display_settings.
+
+    DATA lo_display TYPE REF TO cl_salv_display_settings.
+    DATA lo_cols_tab TYPE REF TO cl_salv_columns_table.
+
+    " Optimize column width
+    lo_cols_tab = co_alv->get_columns( ).
+    lo_cols_tab->set_optimize( abap_true ).
+
+    "Get display object
+    lo_display = co_alv->get_display_settings( ).
+
+    "Set ZEBRA pattern
+    lo_display->set_striped_pattern( abap_true ).
+
+    "ALV title
+    lo_display->set_list_header( CONV #( TEXT-001 ) ).
+
+    "Hide the columns that have not been selected in the selection screen
+    hide_columns( CHANGING co_alv = co_alv ).
+
+  ENDMETHOD.
+
+  METHOD hide_columns.
+
+    DATA: lo_column  TYPE REF TO cl_salv_column_table,
+          lo_columns TYPE REF TO cl_salv_columns_table.
+
+    lo_columns = co_alv->get_columns( ).
+
+    IF ms_selection_screen-name EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-name ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+    IF ms_selection_screen-lname EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-lastname ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+    IF ms_selection_screen-dept EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-department ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+    IF ms_selection_screen-floor EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-floor ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+    IF ms_selection_screen-area EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-area ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+    IF ms_selection_screen-ofname EQ abap_false.
+      lo_column ?= lo_columns->get_column( columnname = mc_s_colname-officename ).
+      lo_column->set_visible( value = if_salv_c_bool_sap=>false ).
+    ENDIF.
+
+  ENDMETHOD.
+
+ENDCLASS.
