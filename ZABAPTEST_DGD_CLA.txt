@@ -9,24 +9,7 @@ CLASS gcl_program DEFINITION FINAL.
                  error   TYPE syst-msgty VALUE 'E', "Error essage type
                  success TYPE syst-msgty VALUE 'S', "Success message type
                  msgid   TYPE syst-msgid VALUE 'ZABAPTEST_DGD', "Our message class
-               END OF mc_s_message,
-               BEGIN OF mc_s_table_name, "Constant structure with the table names
-                 employee    TYPE tabname30 VALUE '/BASF/EMPLOYEE',
-                 departments TYPE tabname30 VALUE '/BASF/DEPARTMENTS',
-                 locations   TYPE tabname30 VALUE '/BASF/LOCATIONS',
-               END OF mc_s_table_name,
-               BEGIN OF mc_s_colname, "Column names. Used in the ALV settings
-                 name       TYPE lvc_fname VALUE 'NAME',
-                 lastname   TYPE lvc_fname VALUE 'LASTNAME',
-                 department TYPE lvc_fname VALUE 'DEPARTMENT',
-                 floor      TYPE lvc_fname VALUE 'FLOOR',
-                 area       TYPE lvc_fname VALUE 'AREA',
-                 officename TYPE lvc_fname VALUE 'OFFICENAME',
-               END OF mc_s_colname,
-               BEGIN OF mc_s_alv_settings,
-                 pfstatus TYPE sypfkey VALUE 'STANDARD_FULLSCREEN',
-                 report   TYPE syrepid VALUE 'SAPLSETB',
-               END OF mc_s_alv_settings.
+               END OF mc_s_message.
 
     "Types
     TYPES: BEGIN OF mty_s_selection_screen,
@@ -65,6 +48,23 @@ CLASS gcl_program DEFINITION FINAL.
            END OF mty_s_data,
            mty_t_data TYPE STANDARD TABLE OF mty_s_data WITH DEFAULT KEY.
     "Attributes
+    CONSTANTS: BEGIN OF mc_s_table_name, "Constant structure with the table names
+                 employee    TYPE tabname30 VALUE '/BASF/EMPLOYEE',
+                 departments TYPE tabname30 VALUE '/BASF/DEPARTMENTS',
+                 locations   TYPE tabname30 VALUE '/BASF/LOCATIONS',
+               END OF mc_s_table_name,
+               BEGIN OF mc_s_colname, "Column names. Used in the ALV settings
+                 name       TYPE lvc_fname VALUE 'NAME',
+                 lastname   TYPE lvc_fname VALUE 'LASTNAME',
+                 department TYPE lvc_fname VALUE 'DEPARTMENT',
+                 floor      TYPE lvc_fname VALUE 'FLOOR',
+                 area       TYPE lvc_fname VALUE 'AREA',
+                 officename TYPE lvc_fname VALUE 'OFFICENAME',
+               END OF mc_s_colname,
+               BEGIN OF mc_s_alv_settings,
+                 pfstatus TYPE sypfkey VALUE 'STANDARD_FULLSCREEN',
+                 report   TYPE syrepid VALUE 'SAPLSETB',
+               END OF mc_s_alv_settings.
     DATA: ms_selection_screen TYPE mty_s_selection_screen.
     "Methods
     METHODS get_sel_fields RETURNING VALUE(rv_sel_fields) TYPE string RAISING zcx_abaptest_dgd.
