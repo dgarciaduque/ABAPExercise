@@ -1,0 +1,38 @@
+*&---------------------------------------------------------------------*
+*& Report ZABAPTEST_DGD
+*&---------------------------------------------------------------------*
+*& Exercise 3: create a report that allows us to create a dynamic query
+*&             with dynamic join and where
+*&---------------------------------------------------------------------*
+REPORT zabaptest_dgd.
+
+INCLUDE zabaptest_dgd_scr.
+INCLUDE zabaptest_dgd_cla.
+
+START-OF-SELECTION.
+
+  TRY .
+      "We pass the selection screen parameters in a structure to the constructor
+      DATA(go_program) = NEW gcl_program( VALUE #( name = p_name
+                                                   lname = p_lname
+                                                   dept = p_dept
+                                                   floor = p_floor
+                                                   area = p_area
+                                                   ofname = p_ofname
+                                                   empid_rg = s_empid[]
+                                                   name_rg = s_name[]
+                                                   lname_rg = s_lname[]
+                                                   deptid_rg = s_deptid[]
+                                                   dept_rg = s_dept[]
+                                                   locid_rg = s_locid[]
+                                                   floor_rg = s_floor[]
+                                                   area_rg = s_area[]
+                                                   offid_rg = s_offid[]
+                                                   offnam_rg = s_offnam[] ) ).
+
+      "Execute the program's logic
+      go_program->run( ).
+    CATCH cx_root INTO DATA(gcx_root).
+      "We handle all the exceptions, catching the CX_ROOT
+      MESSAGE gcx_root->get_text( ) TYPE gcl_program=>mc_s_message-success DISPLAY LIKE gcl_program=>mc_s_message-error.
+  ENDTRY.
