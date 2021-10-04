@@ -83,28 +83,20 @@ CLASS gcl_program DEFINITION FINAL.
 ENDCLASS.
 
 CLASS gcl_program IMPLEMENTATION.
+
   METHOD constructor.
 
     "Save the selection screen parameters for later use
     ms_selection_screen = is_selection_screen.
 
   ENDMETHOD.
-
+  
   METHOD run.
-
-    "Get selection fields depending on the selection screen parameters
-    DATA(lv_sel_fields) = get_sel_fields( ).
-
-    "Get JOIN clause depending on the selection screen parameters
-    DATA(lv_dtab_syntax) = get_dtab_syntax( ).
-
-    "Get the condition for the WHERE dynamically, depending on the selection screen parameters
-    DATA(lv_condition) = get_condition( ).
-
+  
     "Select the data
-    DATA(lt_data) = get_data( iv_sel_fields = lv_sel_fields
-                              iv_dtab_syntax = lv_dtab_syntax
-                              iv_condition = lv_condition ).
+    DATA(lt_data) = get_data( iv_sel_fields = get_sel_fields( ) "Get dynamic selection fields
+                              iv_dtab_syntax = get_dtab_syntax( ) "Get dynamic database syntax
+                              iv_condition = get_condition( ) ). "Get dynamic WHERE condition
 
     "Display the data in an ALV
     show_alv( lt_data ).
